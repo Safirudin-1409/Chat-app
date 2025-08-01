@@ -7,46 +7,46 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL;
 axios.defaults.baseURL = backendUrl;
 export const AuthContext = createContext();
 
-export const AuthProvider = ({children}) => {
+export const AuthProvider = ({ children }) => {
 
-    const [token,setToken] = useState(localStorage.getItem("token"));
-    const [authUser,setAuthUser] = useState(null);
-    const [onlineUsers,setOnlineUsers] = useState([]);
-    const [socket,setSocket] = useState(null);
-    
+    const [token, setToken] = useState(localStorage.getItem("token"));
+    const [authUser, setAuthUser] = useState(null);
+    const [onlineUsers, setOnlineUsers] = useState([]);
+    const [socket, setSocket] = useState(null);
+
     // check if the user is authenticated and if so set the user data to data
-    
-    const checkAuth =  async () => {
-        try{
-            const {data} = await axios.get("/api/auth/check");
-            if(data.success){
+
+    const checkAuth = async () => {
+        try {
+            const { data } = await axios.get("/api/auth/check");
+            if (data.success) {
                 setAuthUser(data.user);
                 connectSocket(data.user);
             }
         }
-        catch(error){
+        catch (error) {
             toast.error(error.message);
         }
     };
 
     // Login Function for user authentication
 
-    const login = async (state,credentials) => {
-        try{
-            const {data} = await axios.post(`/api/auth/${state}`,credentials);
-            if(data.success){
+    const login = async (state, credentials) => {
+        try {
+            const { data } = await axios.post(`/api/auth/${state}`, credentials);
+            if (data.success) {
                 setAuthUser(data.userData);
                 connectSocket(data.userData);
                 axios.defaults.headers.common["token"] = data.token;
                 setToken(data.token);
-                localStorage.setItem("token",data.token);
+                localStorage.setItem("token", data.token);
                 toast.success(data.message);
             }
-            else{
+            else {
                 toast.error(data.message);
             }
         }
-        catch(error){
+        catch (error) {
             toast.error(error.message);
         }
     };
@@ -73,7 +73,7 @@ export const AuthProvider = ({children}) => {
                 toast.success("Profile updated successfully");
             }
         }
-        catch(error){
+        catch (error) {
             toast.error(error.message);
         }
     };
@@ -81,9 +81,9 @@ export const AuthProvider = ({children}) => {
     // connecting to socket
 
     const connectSocket = (userData) => {
-        if(!userData || socket?.connected) return;
-        const newSocket = io(backendUrl,{
-            query : {
+        if (!userData || socket?.connected) return;
+        const newSocket = io(backendUrl, {
+            query: {
                 userId: userData._id,
             }
         });
@@ -96,13 +96,37 @@ export const AuthProvider = ({children}) => {
     };
 
     // whenever u have logged it this hook will be executed
-    
+
     useEffect(() => {
-        if(token){
+        if (token) {
             axios.defaults.headers.common["token"] = token;
         }
         checkAuth();
-    },[]);
+    }, []);
+
+    // Auto Logout if expired 
+
+    useEffect(() => {
+        if (token) {
+            const decoded = jwtDecode(token);
+            const now = Date.now() / 1000;
+
+            if (decoded.exp < now) {
+                logout(); // token expired now
+            } else {
+                axios.defaults.headers.common["token"] = token;
+                checkAuth(); // validate with backend
+
+                const expiresIn = decoded.exp * 1000 - Date.now();
+                const logoutTimer = setTimeout(() => {
+                    logout(); // auto logout after X ms
+                }, expiresIn);
+
+                return () => clearTimeout(logoutTimer); // cleanup
+            }
+        }
+    }, []);
+
 
     const value = {
         axios,
@@ -116,7 +140,7 @@ export const AuthProvider = ({children}) => {
     };
 
     return (
-        <AuthContext.Provider value= {value}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
