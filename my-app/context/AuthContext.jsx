@@ -2,7 +2,6 @@ import axios from "axios";
 import { createContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
-import jwtDecode from "jwt-decode";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 axios.defaults.baseURL = backendUrl;
@@ -105,28 +104,6 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
     }, []);
 
-    // Auto Logout if expired 
-
-    useEffect(() => {
-        if (token) {
-            const decoded = jwtDecode(token);
-            const now = Date.now() / 1000;
-
-            if (decoded.exp < now) {
-                logout(); // token expired now
-            } else {
-                axios.defaults.headers.common["token"] = token;
-                checkAuth(); // validate with backend
-
-                const expiresIn = decoded.exp * 1000 - Date.now();
-                const logoutTimer = setTimeout(() => {
-                    logout(); // auto logout after X ms
-                }, expiresIn);
-
-                return () => clearTimeout(logoutTimer); // cleanup
-            }
-        }
-    }, []);
 
 
     const value = {

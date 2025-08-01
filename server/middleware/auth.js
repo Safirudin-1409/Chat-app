@@ -8,9 +8,9 @@ configDotenv();
 export const protectRoute = async (req,res,next) => {
     try{
         const token = req.headers.token;
-        if (!token) {
-            return res.status(401).json({ success: false, message: "No token provided" });
-        }
+        // if (!token) {
+        //     return res.status(401).json({ success: false, message: "No token provided" });
+        // }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select("-password");
         if(!user){
@@ -20,14 +20,14 @@ export const protectRoute = async (req,res,next) => {
         next();
     }
     catch(error){
-        // console.error(error.message);
-        // res.json({success: false, message: error.message});
-        console.error("JWT Error:", error.message);
+        console.error(error.message);
+        res.json({success: false, message: error.message});
+        // console.error("JWT Error:", error.message);
 
-        if (error.name === "TokenExpiredError") {
-            return res.status(401).json({ success: false, message: "Token expired" });
-        }
+        // if (error.name === "TokenExpiredError") {
+        //     return res.status(401).json({ success: false, message: "Token expired" });
+        // }
 
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        // return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 }
